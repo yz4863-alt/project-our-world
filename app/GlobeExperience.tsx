@@ -299,6 +299,8 @@ function makePin(location: Location) {
 
 export default function GlobeExperience() {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const photoDrawerRef = useRef<HTMLElement | null>(null);
+  const photoDetailRef = useRef<HTMLElement | null>(null);
   const resetViewRef = useRef<(location?: Location | null) => void>(() => undefined);
   const hasHydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -316,6 +318,32 @@ export default function GlobeExperience() {
   const [passwordError, setPasswordError] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+
+  useEffect(() => {
+    if (!selectedPhoto || !window.matchMedia("(max-width: 760px)").matches) {
+      return;
+    }
+
+    const animationFrame = requestAnimationFrame(() => {
+      const drawer = photoDrawerRef.current;
+      const detail = photoDetailRef.current;
+
+      if (!drawer || !detail) {
+        return;
+      }
+
+      const drawerBounds = drawer.getBoundingClientRect();
+      const detailBounds = detail.getBoundingClientRect();
+      const detailTop = detailBounds.top - drawerBounds.top + drawer.scrollTop;
+
+      drawer.scrollTo({
+        top: Math.max(detailTop - 10, 0),
+        behavior: "smooth",
+      });
+    });
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [selectedPhoto]);
 
   useEffect(() => {
     if (!isUnlocked) {
@@ -662,7 +690,10 @@ export default function GlobeExperience() {
       </aside>
 
       <section
-        className={`photo-drawer ${selectedLocation ? "is-open" : ""}`}
+        ref={photoDrawerRef}
+        className={`photo-drawer ${selectedLocation ? "is-open" : ""} ${
+          selectedPhoto ? "has-photo" : ""
+        }`}
         aria-label={`${selectedLocation?.name ?? "Selected location"} photos`}
         aria-hidden={!selectedLocation}
         data-testid="photo-drawer"
@@ -688,6 +719,7 @@ export default function GlobeExperience() {
         </div>
         {selectedPhoto ? (
           <article
+            ref={photoDetailRef}
             className={`photo-detail ${selectedPhoto.caption ? "" : "is-image-only"}`}
             aria-live="polite"
           >

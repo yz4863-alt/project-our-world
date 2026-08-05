@@ -19,10 +19,19 @@
 html,
 body {
   margin: 0;
+  width: 100%;
+  height: 100%;
   min-height: 100%;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overscroll-behavior: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
 }
 
 button {
@@ -132,6 +141,8 @@ button {
 
 .experience-shell {
   position: relative;
+  height: 100vh;
+  height: 100svh;
   min-height: 100vh;
   overflow: hidden;
   background: #050509;
@@ -426,6 +437,14 @@ button {
     overscroll-behavior: contain;
   }
 
+  .photo-drawer.is-open.has-photo {
+    max-height: calc(100svh - 24px);
+    overflow-y: auto;
+    pointer-events: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .drawer-copy {
     padding-top: var(--drawer-inset);
     padding-bottom: 12px;
@@ -454,6 +473,15 @@ button {
     grid-template-columns: 1fr;
     margin-bottom: 16px;
     gap: 10px;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  .photo-detail-image {
+    pointer-events: none;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 
   .photo-detail p {
