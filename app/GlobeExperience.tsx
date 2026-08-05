@@ -45,6 +45,8 @@ const DESKTOP_MIN_ZOOM_DISTANCE = 1.85;
 const TOUCH_MIN_ZOOM_DISTANCE = 2.12;
 const LOCATION_FOCUS_DISTANCE = 3.15;
 const GLOBE_REST_DISTANCE = 4.55;
+const MOBILE_GLOBE_REST_PADDING = 1.06;
+const MOBILE_GLOBE_VISUAL_RADIUS = EARTH_RADIUS * 1.06;
 const PIN_SURFACE_OFFSET = 0.012;
 const PIN_TAP_MAX_DRAG_DISTANCE = 8;
 const tripLocations = (tripData as TripData).locations;
@@ -66,6 +68,19 @@ function latLngToVector3(lat: number, lng: number, radius: number) {
     radius * Math.sin(latRad),
     -radius * Math.cos(latRad) * Math.sin(lngRad),
   );
+}
+
+function getMobileGlobeRestDistance(
+  camera: THREE.PerspectiveCamera,
+  width: number,
+  height: number,
+) {
+  const aspect = Math.max(width, 1) / Math.max(height, 1);
+  const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+  const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect);
+  const limitingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+
+  return (MOBILE_GLOBE_VISUAL_RADIUS / Math.sin(limitingHalfFov)) * MOBILE_GLOBE_REST_PADDING;
 }
 
 function readSavedUnlock() {
@@ -355,16 +370,36 @@ export default function GlobeExperience() {
       return;
     }
 
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x050509, 4.8, 9);
-
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    const prefersTouchLayout =
+      window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 760;
+    const getViewportSize = () => ({
+      width: host.clientWidth || window.innerWidth || 1,
+      height: host.clientHeight || window.innerHeight || 1,
+    });
+    const getRestDistance = () => {
+      if (!prefersTouchLayout) {
+        return GLOBE_REST_DISTANCE;
+      }
+
+      const { width, height } = getViewportSize();
+      return Math.max(
+        GLOBE_REST_DISTANCE,
+        getMobileGlobeRestDistance(camera, width, height),
+      );
+    };
+
+    const scene = new THREE.Scene();
+    scene.fog = prefersTouchLayout
+      ? new THREE.Fog(0x050509, 9.5, 17)
+      : new THREE.Fog(0x050509, 4.8, 9);
+
     const homeNormal = latLngToVector3(
       defaultLocation.lat,
       defaultLocation.lng,
       1,
     ).normalize();
-    const homePosition = homeNormal.clone().multiplyScalar(GLOBE_REST_DISTANCE);
+    const homePosition = homeNormal.clone().multiplyScalar(getRestDistance());
     camera.position.copy(homePosition);
     camera.lookAt(0, 0, 0);
 
@@ -377,8 +412,6 @@ export default function GlobeExperience() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(renderer.domElement);
 
-    const prefersTouchLayout =
-      window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 760;
     const getPixelRatioCap = () => {
       const compactViewport = host.clientWidth < 760 || prefersTouchLayout;
       return compactViewport ? 1.75 : 3;
@@ -396,7 +429,9 @@ export default function GlobeExperience() {
     controls.minDistance = useHighResolutionTiles
       ? DESKTOP_MIN_ZOOM_DISTANCE
       : TOUCH_MIN_ZOOM_DISTANCE;
-    controls.maxDistance = 6.1;
+    controls.maxDistance = prefersTouchLayout
+      ? Math.max(6.1, getRestDistance() + 1.1)
+      : 6.1;
     controls.rotateSpeed = prefersTouchLayout ? 0.44 : 0.52;
     controls.zoomSpeed = prefersTouchLayout ? 0.58 : 0.72;
 
@@ -478,6 +513,9 @@ export default function GlobeExperience() {
       camera.updateProjectionMatrix();
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, getPixelRatioCap()));
       renderer.setSize(clientWidth, clientHeight, false);
+      if (prefersTouchLayout) {
+        controls.maxDistance = Math.max(6.1, getRestDistance() + 1.1);
+      }
     };
 
     const animateCameraTo = (toPosition: THREE.Vector3, toTarget: THREE.Vector3) => {
@@ -507,7 +545,7 @@ export default function GlobeExperience() {
         ? latLngToVector3(location.lat, location.lng, 1).normalize()
         : homeNormal;
       animateCameraTo(
-        restNormal.clone().multiplyScalar(GLOBE_REST_DISTANCE),
+        restNormal.clone().multiplyScalar(getRestDistance()),
         new THREE.Vector3(0, 0, 0),
       );
     };
