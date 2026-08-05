@@ -397,9 +397,33 @@ button {
 }
 
 @media (max-width: 760px) {
+  .experience-shell {
+    --mobile-panel-bottom: max(16px, calc(12px + env(safe-area-inset-bottom, 0px)));
+    --mobile-readout-bottom: max(
+      34px,
+      calc(18px + env(safe-area-inset-bottom, 0px))
+    );
+
+    height: 100svh;
+    min-height: 100svh;
+  }
+
+  @supports (height: 100dvh) {
+    .experience-shell {
+      height: 100dvh;
+      min-height: 100dvh;
+    }
+  }
+
   .password-gate {
     min-height: 100svh;
     padding: 18px;
+  }
+
+  @supports (min-height: 100dvh) {
+    .password-gate {
+      min-height: 100dvh;
+    }
   }
 
   .password-panel {
@@ -416,7 +440,7 @@ button {
     top: auto;
     right: auto;
     left: 20px;
-    bottom: 28px;
+    bottom: var(--mobile-readout-bottom);
     width: auto;
     border-left: 0;
     padding-left: 0;
@@ -431,18 +455,28 @@ button {
 
     left: 12px;
     right: 12px;
-    bottom: 12px;
+    bottom: var(--mobile-panel-bottom);
     width: auto;
-    max-height: min(70svh, 560px);
+    max-height: min(calc(70svh - var(--mobile-panel-bottom)), 560px);
     overscroll-behavior: contain;
   }
 
   .photo-drawer.is-open.has-photo {
-    max-height: calc(100svh - 24px);
+    max-height: calc(100svh - 12px - var(--mobile-panel-bottom));
     overflow-y: auto;
     pointer-events: auto;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+  }
+
+  @supports (height: 100dvh) {
+    .photo-drawer {
+      max-height: min(calc(70dvh - var(--mobile-panel-bottom)), 560px);
+    }
+
+    .photo-drawer.is-open.has-photo {
+      max-height: calc(100dvh - 12px - var(--mobile-panel-bottom));
+    }
   }
 
   .drawer-copy {
@@ -504,7 +538,6 @@ button {
 
   .location-readout {
     left: 18px;
-    bottom: 22px;
   }
 
   .photo-tile {
